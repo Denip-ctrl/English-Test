@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listening Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        hr {
+            border: 1px solid #ddd;
+        }
+        .question {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .options {
+            margin-top: 10px;
+        }
+        .button {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: 120px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Listening Test</h1>
+    <div id="data"></div>
+    <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
+
+    <script>
+        let sheetData = []; // Store sheet data
+        let currentQuestionIndex = 0; // Track current question
+
+        /*async function fetchSheetData() {
+            const spreadsheetId = "19thbKkn07eHqgebQzS4gVo4i_J-HSO9Xz8TNd76zcqU"; // Replace with actual ID
+            const range = "Dialog1!A2:H10"; // Define range
+            const apiKey = "AIzaSyAdZgOVAfwmWeR4_cl7srFIeQNMB9I4PNA"; // Replace with actual API key
+
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
+
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.values) {
+                    sheetData = result.values;
+                    displayQuestion();
+                } else {
+                    document.getElementById("data").innerHTML = "No data found.";
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                document.getElementById("data").innerHTML = "Failed to load data.";
+            }
+        }*/
+
+	async function fetchSheetData() {
+    try {
+        const response = await fetch("/.netlify/functions/fetchData");
+        const result = await response.json();
+        
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        if (result.values) {
+            sheetData = result.values;
+            displayQuestion();
+        } else {
+            document.getElementById("data").innerHTML = "<p>No data found.</p>";
+        }
+
+    } catch (error) {
+        console.error("Error:", error.message);
+        document.getElementById("data").innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+    }
+}
+
+
+
+        function displayQuestion() {
+            if (currentQuestionIndex >= sheetData.length) {
+                document.getElementById("data").innerHTML = "<p>Test completed!</p>";
+                document.getElementById("nextBtn").style.display = "none";
+                return;
+            }
+
+            const row = sheetData[currentQuestionIndex];
+            let output = `<p class="question">${row[0]}</p>`;
+            output += `<button class="button" onclick="playTexts('${row[1]}', '${row[2]}')">Listen</button>`;
+
+            output += `<div class="options">`;
+            output += `<label><input type="radio" name="answer" value="A"> A) ${row[3]}</label><br>`;
+            output += `<label><input type="radio" name="answer" value="B"> B) ${row[4]}</label><br>`;
+            output += `<label><input type="radio" name="answer" value="C"> C) ${row[5]}</label><br>`;
+            output += `<label><input type="radio" name="answer" value="D"> D) ${row[6]}</label><br>`;
+            output += `</div>`;
+            output += `<button class="button" onclick="submitAnswer()">Submit</button>`;
+            document.getElementById("data").innerHTML = output;
+
+            document.getElementById("nextBtn").style.display = "none"; // Hide next button until answer is submitted
+        }
+
+        function playTexts(text1, text2) {
+            const synth = window.speechSynthesis;
+
+            // Speak the first text (male voice)
+            const utterance1 = new SpeechSynthesisUtterance(text1);
+            const voices = synth.getVoices();
+            utterance1.voice = voices.find(voice => voice.name.includes("Male")) || voices[0];
+            synth.speak(utterance1);
+
+            // Delay of 2 seconds before playing the second text
+            setTimeout(() => {
+                const utterance2 = new SpeechSynthesisUtterance(text2);
+                utterance2.voice = voices.find(voice => voice.name.includes("Female")) || voices[0];
+                synth.speak(utterance2);
+            }, 2000);
+        }
+
+        function submitAnswer() {
+            const selectedOption = document.querySelector('input[name="answer"]:checked');
+            if (!selectedOption) {
+                alert("Please select an answer before submitting.");
+                return;
+            }
+            document.getElementById("nextBtn").style.display = "block"; // Show next button
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            displayQuestion();
+        }
+
+        window.speechSynthesis.onvoiceschanged = () => {
+            fetchSheetData();
+        };
+    </script>
+
+</body>
+</html>
+
+
