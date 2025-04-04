@@ -8,7 +8,7 @@ exports.handler = async () => {
         const response = await fetch(url); // No need for require('node-fetch')
         const data = await response.json();
         return { statusCode: 200, body: JSON.stringify(data) };
-    } catch (error) {
-        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-    }
+    } catch (error) {return { statusCode: 500, body: JSON.stringify({ error: error.message || JSON.stringify(error) }) };
+}
+
 };
