@@ -34,17 +34,19 @@
     <div id="data"></div>
     <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
 
-<script>
-    window.speechSynthesis.onvoiceschanged = () => {
-        const voices = window.speechSynthesis.getVoices();
-        console.log("Voices Loaded:", voices.map(v => v.name)); // Logs available voices
+    <!-- New "Play Voice" button for user activation -->
+    <button id="speakButton">Play Voice</button>
 
-        // Speak after voices are ready
-        const utterance = new SpeechSynthesisUtterance("Testing speech synthesis after voices are ready");
-        utterance.voice = voices[0] || null; // Select first available voice
-        window.speechSynthesis.speak(utterance);
-    };
-</script>
+    <script>
+        document.getElementById("speakButton").addEventListener("click", () => {
+            const voices = window.speechSynthesis.getVoices();
+            console.log("Voices Loaded:", voices.map(v => v.name)); // Logs available voices
+
+            const utterance = new SpeechSynthesisUtterance("Testing speech synthesis after user activation");
+            utterance.voice = voices[0] || null; // Select first available voice
+            window.speechSynthesis.speak(utterance);
+        });
+    </script>
 
     <script>
         let sheetData = []; // Store sheet data
@@ -130,4 +132,5 @@
 
 </body>
 </html>
+
 
