@@ -34,6 +34,18 @@
     <div id="data"></div>
     <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
 
+<script>
+    window.speechSynthesis.onvoiceschanged = () => {
+        const voices = window.speechSynthesis.getVoices();
+        console.log("Voices Loaded:", voices.map(v => v.name)); // Logs available voices
+
+        // Speak after voices are ready
+        const utterance = new SpeechSynthesisUtterance("Testing speech synthesis after voices are ready");
+        utterance.voice = voices[0] || null; // Select first available voice
+        window.speechSynthesis.speak(utterance);
+    };
+</script>
+
     <script>
         let sheetData = []; // Store sheet data
         let currentQuestionIndex = 0; // Track current question
