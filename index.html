@@ -9,6 +9,9 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
+        hr {
+            border: 1px solid #ddd;
+        }
         .question {
             font-weight: bold;
             font-size: 18px;
@@ -52,28 +55,31 @@
         let sheetData = []; // Store sheet data
         let currentQuestionIndex = 0; // Track current question
 
-        async function fetchData() {
-            try {
-                const response = await fetch("/.netlify/functions/fetchData");
-                const text = await response.text(); // Get raw response
-                console.log("Raw response:", text); // Log it
 
-                const result = JSON.parse(text); // Parse JSON
-                console.log("Parsed Data:", result);
-
-                if (result.error) throw new Error(result.error.message);
-
-                if (result.values) {
-                    sheetData = result.values;
-                    displayQuestion();
-                } else {
-                    document.getElementById("data").innerHTML = "<p>No data found.</p>";
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                document.getElementById("data").innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
-            }
+	async function fetchSheetData() {
+    try {
+        const response = await fetch("/.netlify/functions/fetchData");
+        const result = await response.json();
+        
+        if (result.error) {
+            throw new Error(result.error);
         }
+
+        if (result.values) {
+            sheetData = result.values;
+            displayQuestion();
+        } else {
+            document.getElementById("data").innerHTML = "<p>No data found.</p>";
+        }
+
+    } catch (error) {
+        console.error("Error:", error);
+document.getElementById("data").innerHTML = `<p style="color:red;">Error: ${error.error || JSON.stringify(error) || "Unexpected failure"}</p>`;
+
+    }
+}
+
+
 
         function displayQuestion() {
             if (currentQuestionIndex >= sheetData.length) {
@@ -93,19 +99,21 @@
             output += `<label><input type="radio" name="answer" value="D"> D) ${row[6]}</label><br>`;
             output += `</div>`;
             output += `<button class="button" onclick="submitAnswer()">Submit</button>`;
-            
             document.getElementById("data").innerHTML = output;
+
             document.getElementById("nextBtn").style.display = "none"; // Hide next button until answer is submitted
         }
 
         function playTexts(text1, text2) {
             const synth = window.speechSynthesis;
-            const voices = synth.getVoices();
 
+            // Speak the first text (male voice)
             const utterance1 = new SpeechSynthesisUtterance(text1);
+            const voices = synth.getVoices();
             utterance1.voice = voices.find(voice => voice.name.includes("Male")) || voices[0];
             synth.speak(utterance1);
 
+            // Delay of 2 seconds before playing the second text
             setTimeout(() => {
                 const utterance2 = new SpeechSynthesisUtterance(text2);
                 utterance2.voice = voices.find(voice => voice.name.includes("Female")) || voices[0];
@@ -127,7 +135,9 @@
             displayQuestion();
         }
 
-        document.addEventListener("DOMContentLoaded", fetchData);
+        window.speechSynthesis.onvoiceschanged = () => {
+            fetchSheetData();
+        };
     </script>
 
 </body>
