@@ -4,54 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Listening Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .question {
-            font-weight: bold;
-            font-size: 18px;
-        }
-        .options {
-            margin-top: 10px;
-        }
-        .button {
-            display: block;
-            margin: 10px 0;
-            padding: 8px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            cursor: pointer;
-            width: 120px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
     <h1>Listening Test</h1>
-    <div id="data"></div>
-    <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
+    <div id="timer">Time Remaining: 10:00</div>
+
+    <div id="data">
+        <!-- Question and Listen Button -->
+        <div class="question-container">
+            <p class="question">Question 1</p>
+            <button class="button" onclick="startTestTimer(); playTexts('Text1', 'Text2')">Listen</button>
+        </div>
+
+        <!-- Choices -->
+        <div class="options">
+            <label><input type="radio" name="answer" value="A"> Option A with longer text</label>
+            <label><input type="radio" name="answer" value="B"> Option B</label>
+            <label><input type="radio" name="answer" value="C"> Option C</label>
+            <label><input type="radio" name="answer" value="D"> Option D</label>
+        </div>
+
+        <!-- Submit and Next Buttons -->
+        <div class="button-container">
+            <button class="button" onclick="submitAnswer()">Submit</button>
+            <button class="button" id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
+        </div>
+    </div>
 
     <script>
         let sheetData = []; // Store sheet data
         let currentQuestionIndex = 0; // Track current question
+        let timerInterval; // Timer interval
+        let timeRemaining = 600; // 10 minutes in seconds
+        let timerStarted = false; // Track if the timer has started
+        let score = 0; // Track score
+        let totalQuestions = 0; // Total questions count
 
         async function fetchData() {
             try {
                 const response = await fetch("/.netlify/functions/fetchData");
                 const text = await response.text(); // Get raw response
-                console.log("Raw response:", text); // Log it
-
                 const result = JSON.parse(text); // Parse JSON
-                console.log("Parsed Data:", result);
 
                 if (result.error) throw new Error(result.error.message);
 
                 if (result.values) {
                     sheetData = result.values;
-                    displayQuestion();
+                    totalQuestions = sheetData.length;
+                    shuffleQuestions(sheetData); // Shuffle questions
+                    displayQuestion(); // Display first question
                 } else {
                     document.getElementById("data").innerHTML = "<p>No data found.</p>";
                 }
@@ -61,40 +64,69 @@
             }
         }
 
+        function shuffleQuestions(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+        }
+
         function displayQuestion() {
             if (currentQuestionIndex >= sheetData.length) {
-                document.getElementById("data").innerHTML = "<p>Test completed!</p>";
-                document.getElementById("nextBtn").style.display = "none";
+                calculateScore();
                 return;
             }
 
             const row = sheetData[currentQuestionIndex];
-            let output = `<p class="question">${row[0]}</p>`;
-            output += `<button class="button" onclick="playTexts('${row[1]}', '${row[2]}')">Listen</button>`;
+            const questionNumber = currentQuestionIndex + 1; // Question numbering starts at 1
 
-            output += `<div class="options">`;
-            output += `<label><input type="radio" name="answer" value="A"> A) ${row[3]}</label><br>`;
-            output += `<label><input type="radio" name="answer" value="B"> B) ${row[4]}</label><br>`;
-            output += `<label><input type="radio" name="answer" value="C"> C) ${row[5]}</label><br>`;
-            output += `<label><input type="radio" name="answer" value="D"> D) ${row[6]}</label><br>`;
-            output += `</div>`;
-            output += `<button class="button" onclick="submitAnswer()">Submit</button>`;
-            
+            let output = `
+                <div class="question-container">
+                    <p class="question">Question ${questionNumber}</p>
+                    <button class="button" onclick="startTestTimer(); playTexts('${row[1]}', '${row[2]}')">Listen</button>
+                </div>
+                <div class="options">
+                    <label><input type="radio" name="answer" value="A"> ${row[3]}</label>
+                    <label><input type="radio" name="answer" value="B"> ${row[4]}</label>
+                    <label><input type="radio" name="answer" value="C"> ${row[5]}</label>
+                    <label><input type="radio" name="answer" value="D"> ${row[6]}</label>
+                </div>
+                <div class="button-container">
+                    <button class="button" onclick="submitAnswer()">Submit</button>
+                    <button class="button" id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
+                </div>
+            `;
             document.getElementById("data").innerHTML = output;
-            document.getElementById("nextBtn").style.display = "none"; // Hide next button until answer is submitted
+        }
+
+        function startTestTimer() {
+            if (timerStarted) return; // Prevent restarting the timer
+            timerStarted = true;
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                document.getElementById("timer").innerText = formatTime(timeRemaining);
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    calculateScore();
+                }
+            }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+            return `Time Remaining: ${String(minutes).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
         }
 
         function playTexts(text1, text2) {
             const synth = window.speechSynthesis;
-            const voices = synth.getVoices();
-
             const utterance1 = new SpeechSynthesisUtterance(text1);
-            utterance1.voice = voices.find(voice => voice.name.includes("Male")) || voices[0];
             synth.speak(utterance1);
 
             setTimeout(() => {
                 const utterance2 = new SpeechSynthesisUtterance(text2);
-                utterance2.voice = voices.find(voice => voice.name.includes("Female")) || voices[0];
                 synth.speak(utterance2);
             }, 2000);
         }
@@ -105,11 +137,41 @@
                 alert("Please select an answer before submitting.");
                 return;
             }
-            document.getElementById("nextBtn").style.display = "block"; // Show next button
+
+            const correctAnswer = sheetData[currentQuestionIndex][7]; // Correct answer from column H
+            if (selectedOption.value === correctAnswer) {
+                score++; // Increment score
+            }
+
+            document.getElementById("nextBtn").style.display = "block"; // Show Next button
         }
 
         function nextQuestion() {
             currentQuestionIndex++;
+            if (currentQuestionIndex < sheetData.length) {
+                displayQuestion();
+            } else {
+                clearInterval(timerInterval);
+                calculateScore();
+            }
+        }
+
+        function calculateScore() {
+            const percentage = (score / totalQuestions) * 100;
+            document.getElementById("data").innerHTML = `
+                <p>Test completed! Your score is ${percentage.toFixed(2)}% (${score}/${totalQuestions}).</p>
+                <button class="button" onclick="restartTest()">Restart</button>
+            `;
+        }
+
+        function restartTest() {
+            currentQuestionIndex = 0;
+            score = 0;
+            timerStarted = false;
+            timeRemaining = 600;
+
+            document.getElementById("timer").innerText = "Time Remaining: 10:00";
+            shuffleQuestions(sheetData);
             displayQuestion();
         }
 
@@ -118,4 +180,3 @@
 
 </body>
 </html>
-
